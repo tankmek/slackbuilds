@@ -27,7 +27,8 @@ jobs:
           python3 python3-pip openssl zlib bzip2 libpcap libcurl libssh jemalloc \
           guile libarchive gc libxml2 binutils gettext kernel-headers \
           glibc-i18n glibc-profile glibc-zoneinfo sqlite \
-          dbus dbus-glib dbus-python libnl3 bind libuv lmdb icu4c m4
+          dbus dbus-glib dbus-python libnl3 bind libuv \
+          lmdb icu4c m4 zeromq 
 
       - name: Copy SlackBuild to /tmp/SBo
         run: |
