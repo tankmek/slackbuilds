@@ -28,7 +28,7 @@ jobs:
           guile libarchive gc libxml2 binutils gettext kernel-headers \
           glibc-i18n glibc-profile glibc-zoneinfo sqlite \
           dbus dbus-glib dbus-python libnl3 bind libuv \
-          lmdb icu4c m4 zeromq 
+          lmdb icu4c m4
 
       - name: Copy SlackBuild to /tmp/SBo
         run: |
@@ -54,6 +54,9 @@ jobs:
 
       - name: Install sbo-maintainer-tools
         run: echo p | sbopkg -i sbo-maintainer-tools
+
+      - name: Additional Dependencies
+        run: echo p | sbopkg -i zeromq
 
       - name: Run sbopkglint on built zeek package
         run: |
