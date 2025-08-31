@@ -43,20 +43,20 @@ jobs:
       - name: Make SlackBuild Executable
         run: chmod +x /tmp/SBo/zeek/zeek.SlackBuild
 
+      - name: Refresh SBo repository
+        run: sbopkg -r
+
+      - name: Additional Dependencies
+        run: echo p | sbopkg -i zeromq
+        
       - name: Run SlackBuild
         run: |
           cd /tmp/SBo/zeek
           export VERSION=$(grep '^VERSION=' zeek.info | cut -d'"' -f2)
           ./zeek.SlackBuild
 
-      - name: Refresh SBo repository
-        run: sbopkg -r
-
       - name: Install sbo-maintainer-tools
         run: echo p | sbopkg -i sbo-maintainer-tools
-
-      - name: Additional Dependencies
-        run: echo p | sbopkg -i zeromq
 
       - name: Run sbopkglint on built zeek package
         run: |
