@@ -1,8 +1,9 @@
-#!/bin/bash
+#!/bin/sh
 
-# Slackware build script for zeek
+# Slackware build script for tinyproxy
 
-# Copyright 2018-2025 Michael Edie, Tampa, FL USA
+# Written by Kevin Pulo, kev@pulo.com.au
+# Copyright 2020 Michael Edie Tampa, FL USA
 # All rights reserved.
 #
 # Redistribution and use of this script, with or without modification, is
@@ -22,13 +23,10 @@
 #  OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 #  ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-cd $(dirname $0) ; CWD=$(pwd)
-
-PRGNAM=zeek
-VERSION=${VERSION:-8.0.1}
+PRGNAM=tinyproxy
+VERSION=${VERSION:-1.10.0}
 BUILD=${BUILD:-1}
 TAG=${TAG:-_SBo}
-PKGTYPE=${PKGTYPE:-tgz}
 
 if [ -z "$ARCH" ]; then
   case "$( uname -m )" in
@@ -38,14 +36,7 @@ if [ -z "$ARCH" ]; then
   esac
 fi
 
-# If the variable PRINT_PACKAGE_NAME is set, then this script will report what
-# the name of the created package would be, and then exit. This information
-# could be useful to other scripts.
-if [ ! -z "${PRINT_PACKAGE_NAME}" ]; then
-  echo "$PRGNAM-$VERSION-$ARCH-$BUILD$TAG.$PKGTYPE"
-  exit 0
-fi
-
+CWD=$(pwd)
 TMP=${TMP:-/tmp/SBo}
 PKG=$TMP/package-$PRGNAM
 OUTPUT=${OUTPUT:-/tmp}
@@ -70,26 +61,30 @@ rm -rf $PKG
 mkdir -p $TMP $PKG $OUTPUT
 cd $TMP
 rm -rf $PRGNAM-$VERSION
-tar xvf $CWD/$PRGNAM-$VERSION.tar.gz
+tar xvf $CWD/$PRGNAM-$VERSION.tar.xz
 cd $PRGNAM-$VERSION
-
 chown -R root:root .
-# -L bails out because of a loop
-find . \
+find -L . \
  \( -perm 777 -o -perm 775 -o -perm 750 -o -perm 711 -o -perm 555 \
   -o -perm 511 \) -exec chmod 755 {} \; -o \
  \( -perm 666 -o -perm 664 -o -perm 640 -o -perm 600 -o -perm 444 \
   -o -perm 440 -o -perm 400 \) -exec chmod 644 {} \;
 
-make distclean
-
 CFLAGS="$SLKCFLAGS" \
 CXXFLAGS="$SLKCFLAGS" \
 ./configure \
-  --prefix=/opt/$PRGNAM \
+  --prefix=/usr \
   --libdir=/usr/lib${LIBDIRSUFFIX} \
+  --sysconfdir=/etc \
   --localstatedir=/var \
-  --mandir=/usr/man
+  --mandir=/usr/man \
+  --docdir=/usr/doc/$PRGNAM-$VERSION \
+  --enable-xtinyproxy \
+  --enable-filter \
+  --enable-upstream \
+  --enable-reverse \
+  --enable-transparent \
+  --build=$ARCH-slackware-linux
 
 make
 make install DESTDIR=$PKG
@@ -97,29 +92,23 @@ make install DESTDIR=$PKG
 find $PKG -print0 | xargs -0 file | grep -e "executable" -e "shared object" | grep ELF \
   | cut -f 1 -d : | xargs strip --strip-unneeded 2> /dev/null || true
 
-BIN="zeek zeek-config zeekctl zeek-cut capstats trace-summary"
-mkdir -p $PKG/usr/bin
-(
-  cd $PKG/usr/bin
-  for i in $BIN
-    do ln -sf ../../opt/$PRGNAM/bin/$i $i
-  done
-)
-
-find -L $PKG -type l 2>&1 | grep loop | iconv -t 8859_1//TRANSLIT |
-  cut -d"'" -f2 | xargs rm -v || true
-
 find $PKG/usr/man -type f -exec gzip -9 {} \;
 for i in $( find $PKG/usr/man -type l ) ; do ln -s $( readlink $i ).gz $i.gz ; rm $i ; done
 
+mv $PKG/etc/$PRGNAM/$PRGNAM.conf $PKG/etc/$PRGNAM/$PRGNAM.conf.new
+sed -i -e "s,/usr/share,&/$PRGNAM,g" \
+       -e "s,/usr/share/$PRGNAM/$PRGNAM,/usr/share/$PRGNAM,g" \
+  $PKG/etc/$PRGNAM/tinyproxy.conf.new
+
 mkdir -p $PKG/usr/doc/$PRGNAM-$VERSION
-cp -a CHANGES README COPYING NEWS VERSION $PKG/usr/doc/$PRGNAM-$VERSION
+cp -a AUTHORS COPYING ChangeLog NEWS README TODO docs/*.txt \
+  $PKG/usr/doc/$PRGNAM-$VERSION
 cat $CWD/$PRGNAM.SlackBuild > $PKG/usr/doc/$PRGNAM-$VERSION/$PRGNAM.SlackBuild
+find $PKG/usr/doc -type f -exec chmod 0644 {} \;
 
 mkdir -p $PKG/install
 cat $CWD/slack-desc > $PKG/install/slack-desc
+cat $CWD/doinst.sh > $PKG/install/doinst.sh
 
 cd $PKG
-rm -f opt/zeek/include/zeek/builtin-plugins/spicy-plugin/usr/lib$LIBDIRSUFFIX/zeek-spicy
-
-/sbin/makepkg -l y -c n $OUTPUT/$PRGNAM-$VERSION-$ARCH-$BUILD$TAG.$PKGTYPE
+/sbin/makepkg -l y -c n $OUTPUT/$PRGNAM-$VERSION-$ARCH-$BUILD$TAG.${PKGTYPE:-tgz}

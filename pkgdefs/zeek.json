@@ -1,0 +1,4 @@
+{
+  "download_fmt": "https://download.zeek.org/zeek-%v.tar.gz",
+  "tarball_fmt": "zeek.tar"
+}

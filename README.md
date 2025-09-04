@@ -1,38 +1,73 @@
 [![Hits](https://hits.seeyoufarm.com/api/count/incr/badge.svg?url=https%3A%2F%2Fgithub.com%2Ftankmek%2FSlackBuilds&count_bg=%2379C83D&title_bg=%23555555&icon=&icon_color=%233A57E7&title=hits&edge_flat=false)](https://hits.seeyoufarm.com)
 
-# SlackBuilds
+# SlackBuilds Maintained
+=======
 
-These are the packages I maintain over at SlackBuilds.org
+This repository hosts my contributions to the
+[SlackBuilds.org](https://www.slackbuilds.org) project, providing build
+scripts for various software packages on Slackware Linux.
 
-SlackBuilds are shell scripts that automate compiling and packaging software on Slackware Linux. 
+Leveraging SlackBuilds ensures a transparent and reproducible build process,
+aligning with Slackware's philosophy of clarity and control.
 
-While you can definitely compile and run software on Slackware without using slackbuilds, it
-is the preferred way. The benefits can be seen in the self documenting nature of the scripts
-as well as the ability to reduce repetitive tasks.
+## Available Packages
 
+| Package        | Description                                                         |
+|----------------|---------------------------------------------------------------------|
+| `dirb`         | Utility for web content discovery, valuable for security            |
+|                | assessments.                                                        |
+| `dnsmasq`      | Lightweight DNS forwarder and DHCP server, ideal for local          |
+|                | networks.                                                           |
+| `fpc-source`   | Source distribution of the Free Pascal Compiler.                    |
+| `lastpass-cli` | Command-line interface for secure password management via           |
+|                | LastPass.                                                           |
+| `usbguard`     | Framework for enforcing policies on USB device access.              |
+| `zeek`         | Powerful, open-source network security monitoring engine.           |
+=======
 
-| Folder | Description |
-| --- | --- |
-| dirb | Web content scanner for auditing |
-| dnsmasq | Personal patched SB. Not on SB.org |
-| fpc-source | Open source compiler for Pascal and Object Pascal |
-| lastpass-cli | LastPass command line interface tool |
-| usbguard | rogue USB device protection |
-| zeek | Network Security Monitor |
+## Installation Recommendations
 
-
-## Installation
-The preferred way is to use [sbotools](https://pink-mist.github.io/sbotools/) which will grab these packages and many others at [SlackBuilds.org](https://www.slackbuilds.org)
-
-## Usage
+For efficient management and installation of these and a broader range of
+SlackBuilds, the [`sbotools`](https://pink-mist.github.io/sbotools/) suite is
+the recommended approach.
+```bash
+sudo sbopkg -r
+sudo sbopkg -i zeek
 ```
-cd /tmp
-git clone https://github.com/tankmek/SlackBuilds.git
-cd SlackBuilds/<appname>
-wget $(grep DOWNLOAD= *.info | grep -Eoi '(http|https):[^"]+' )
-md5sum <appname>.xx (compare with md5sum in .info file)
-sudo su -
-cd /tmp/SlackBuilds/<appname>
-chmod a+x <appname>.SlackBuild
-./<appname>.SlackBuild
-```
+
+## Manual Build Procedure
+
+For building individual packages directly:
+
+1. **Clone the repository:**
+   ```bash
+   cd /tmp
+   git clone https://github.com/tankmek/SlackBuilds.git
+   cd SlackBuilds/<package_name>
+   ```
+
+2. **Retrieve Source:**
+   ```bash
+   export SOURCE_URL=$(grep DOWNLOAD= *.info | awk -F'"' '{print $2}')
+   curl -O "$SOURCE_URL"
+   ```
+
+3. **Verify Integrity:**
+   ```bash
+   grep MD5SUM= *.info | awk -F'=' '{print $2}' | tr -d '"'
+   md5sum "$(basename "$SOURCE_URL")" | awk '{print $1}'
+   # Confirm the output matches "$MD5_SUM"
+   ```
+
+4. **Execute Build (requires root):**
+   ```bash
+   sudo su -
+   cd /tmp/SlackBuilds/<package_name>
+   chmod +x <package_name>.SlackBuild
+   ./<package_name>.SlackBuild
+   ```
+
+   This generates a standard Slackware package (`.txz`) installable via
+   `installpkg`.
+
+---
