@@ -1,53 +1,90 @@
- #!/bin/sh
+#!/bin/sh
 set -eu
 
-# --- Parse Arguments ---
-if [ $# -lt 2 ] || [ $# -gt 3 ]; then
+usage() {
     echo "Usage: $0 <package-name> <new-version> [--dry-run]" >&2
     exit 1
+}
+
+# --- Parse arguments ---
+if [ "$#" -lt 2 ] || [ "$#" -gt 3 ]; then
+    usage
 fi
 
 PKG="$1"
 VERSION="$2"
-DRY_RUN="${3:-}"
+DRY_RUN=""
+
+if [ "$#" -eq 3 ]; then
+    if [ "$3" = "--dry-run" ]; then
+        DRY_RUN="--dry-run"
+    else
+        echo "Unknown option: $3" >&2
+        usage
+    fi
+fi
 
 CONF_JSON="pkgdefs/$PKG.json"
 PKGDIR="./$PKG"
 INFO_FILE="$PKGDIR/${PKG}.info"
 BUILD_FILE="$PKGDIR/${PKG}.SlackBuild"
 
-# --- Validate files ---
+# --- Validate files exist ---
 [ -f "$CONF_JSON" ] || { echo "Missing: $CONF_JSON" >&2; exit 1; }
 [ -f "$INFO_FILE" ] || { echo "Missing: $INFO_FILE" >&2; exit 1; }
 [ -f "$BUILD_FILE" ] || { echo "Missing: $BUILD_FILE" >&2; exit 1; }
 
+# --- Check jq availability ---
+if ! command -v jq >/dev/null 2>&1; then
+    echo "Error: jq is required but not installed (e.g. brew install jq)." >&2
+    exit 1
+fi
+
 # --- Load shared functions ---
 . ./utils.sh
 
+WORKDIR=""
+
+cleanup() {
+    if [ -n "${WORKDIR:-}" ] && [ -d "$WORKDIR" ]; then
+        rm -rf "$WORKDIR"
+    fi
+}
+trap cleanup EXIT
+
 # --- Extract current version and short-circuit if same ---
-CURRENT_VERSION=$(grep '^VERSION=' "$INFO_FILE" | cut -d= -f2 | tr -d '"')
+CURRENT_VERSION=$(
+    awk -F= '/^VERSION=/ { gsub(/"/,"",$2); print $2; exit }' "$INFO_FILE"
+)
+
 if [ "$CURRENT_VERSION" = "$VERSION" ]; then
     log "No update needed: current version already $VERSION."
-    [ "$DRY_RUN" = "--dry-run" ] && exit 0
+    exit 0
 fi
 
 # --- Load template URL and generate download target ---
-DOWNLOAD_FMT=$(jq -r .download_fmt "$CONF_JSON")
-URL=$(printf "%s" "$DOWNLOAD_FMT" | sed "s/%v/$VERSION/g")
+DOWNLOAD_FMT=$(jq -r '.download_fmt // empty' "$CONF_JSON")
+if [ -z "$DOWNLOAD_FMT" ]; then
+    echo "Error: .download_fmt not found or empty in $CONF_JSON" >&2
+    exit 1
+fi
+
+URL=$(printf '%s' "$DOWNLOAD_FMT" | sed "s/%v/$VERSION/g")
 
 # --- Download and hash tarball ---
-RESULT=$(download_and_verify "$URL")
-WORKDIR=$(echo "$RESULT" | awk '{print $1}')
-MD5=$(echo "$RESULT" | awk '{print $2}')
+# download_and_verify outputs: "<WORKDIR> <MD5>"
+set -- $(download_and_verify "$URL")
+WORKDIR=$1
+MD5=$2
 
-# --- Copy working files ---
-cp -r "$PKGDIR"/* "$WORKDIR/"
+# --- Copy working files (include dotfiles, preserve attrs) ---
+cp -a "$PKGDIR"/. "$WORKDIR"/
 
-# --- Apply updates ---
-update_info_file "$WORKDIR/${PKG}.info" "$VERSION" "$URL" "$MD5"
-update_build_file "$WORKDIR/${PKG}.SlackBuild" "$VERSION"
+# --- Apply updates in the working directory ---
+update_info_file   "$WORKDIR/${PKG}.info"       "$VERSION" "$URL" "$MD5"
+update_build_file  "$WORKDIR/${PKG}.SlackBuild" "$VERSION"
 
-# --- Dry-run: show proposed changes without modifying files ---
+# --- Dry-run: show proposed changes without modifying source tree ---
 if [ "$DRY_RUN" = "--dry-run" ]; then
     echo "=== DRY RUN: Showing proposed changes for $PKG $VERSION ==="
 
@@ -64,12 +101,15 @@ if [ "$DRY_RUN" = "--dry-run" ]; then
     diff -u "$PKGDIR/${PKG}.SlackBuild" "$WORKDIR/${PKG}.SlackBuild" | $DIFF || true
 
     echo "Dry run complete. No files modified."
-    rm -rf "$WORKDIR"
     exit 0
 fi
+
+# --- Non-dry-run: sync updated files back into the real tree ---
+cp -a "$WORKDIR/${PKG}.info"       "$INFO_FILE"
+cp -a "$WORKDIR/${PKG}.SlackBuild" "$BUILD_FILE"
 
 # --- Final archive ---
 create_archive "$PKG" "$WORKDIR"
 
-# --- Cleanup ---
-rm -rf "$WORKDIR"
+log "Update complete for $PKG -> $VERSION"
+
