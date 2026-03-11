@@ -1,0 +1,5 @@
+{
+  "download_fmt": "https://downloads.sourceforge.net/freepascal/fpc-%v.source.tar.gz",
+  "slackpkg_deps": [],
+  "sbopkg_deps": []
+}

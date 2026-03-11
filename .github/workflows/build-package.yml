@@ -1,0 +1,117 @@
+name: Build Package
+
+on:
+  workflow_call:
+    inputs:
+      package:
+        required: true
+        type: string
+      ref:
+        required: false
+        type: string
+        default: ''
+
+jobs:
+  build-package:
+    runs-on: ubuntu-latest
+    container:
+      image: tankmek/slackware:15.0
+      options: --privileged
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+
+      - name: Update Slackware package database
+        run: |
+          echo y | slackpkg gpg update
+          echo y | slackpkg update
+
+      - name: Install baseline build tools
+        run: |
+          echo y | slackpkg install \
+            gcc gcc-g++ make cmake autoconf automake libtool pkg-config \
+            binutils gettext kernel-headers m4 glibc-i18n glibc-profile jq
+
+      - name: Install package-specific dependencies
+        run: |
+          PKG="${{ inputs.package }}"
+          PKGDEFS="pkgdefs/${PKG}.json"
+
+          if [ ! -f "$PKGDEFS" ]; then
+            echo "No pkgdefs found for ${PKG}, skipping dependency install"
+            exit 0
+          fi
+
+          SLACKPKG_DEPS=$(jq -r '.slackpkg_deps // [] | .[]' "$PKGDEFS")
+          if [ -n "$SLACKPKG_DEPS" ]; then
+            echo "Installing slackpkg dependencies: $SLACKPKG_DEPS"
+            echo y | slackpkg install $SLACKPKG_DEPS
+          fi
+
+          SBOPKG_DEPS=$(jq -r '.sbopkg_deps // [] | .[]' "$PKGDEFS")
+          if [ -n "$SBOPKG_DEPS" ]; then
+            echo "Refreshing SBo repository"
+            sbopkg -r
+            for dep in $SBOPKG_DEPS; do
+              echo "Installing sbopkg dependency: $dep"
+              echo p | sbopkg -i "$dep"
+            done
+          fi
+
+      - name: Copy package to build directory
+        run: |
+          PKG="${{ inputs.package }}"
+          mkdir -p /tmp/SBo
+          cp -r "./${PKG}" "/tmp/SBo/${PKG}"
+
+      - name: Download source tarball
+        run: |
+          PKG="${{ inputs.package }}"
+          cd "/tmp/SBo/${PKG}"
+
+          if [ ! -f "${PKG}.info" ]; then
+            echo "No .info file found, assuming source is bundled"
+            exit 0
+          fi
+
+          DOWNLOAD_URL=$(grep '^DOWNLOAD=' "${PKG}.info" | cut -d'"' -f2)
+          if [ -z "$DOWNLOAD_URL" ]; then
+            echo "Error: DOWNLOAD field is empty in ${PKG}.info"
+            exit 1
+          fi
+
+          echo "Downloading: $DOWNLOAD_URL"
+          wget -c "$DOWNLOAD_URL"
+
+      - name: Run SlackBuild
+        run: |
+          PKG="${{ inputs.package }}"
+          cd "/tmp/SBo/${PKG}"
+
+          if [ -f "${PKG}.info" ]; then
+            export VERSION=$(grep '^VERSION=' "${PKG}.info" | cut -d'"' -f2)
+            echo "Building ${PKG} version ${VERSION}"
+          fi
+
+          chmod +x "${PKG}.SlackBuild"
+          "./${PKG}.SlackBuild"
+
+      - name: Run sbopkglint
+        run: |
+          PKG="${{ inputs.package }}"
+
+          echo "Installing sbo-maintainer-tools"
+          sbopkg -r || true
+          echo p | sbopkg -i sbo-maintainer-tools
+
+          pkg_file=$(find /tmp -maxdepth 1 -name "${PKG}-*.t?z" | head -n1)
+          if [ -z "$pkg_file" ]; then
+            echo "Error: No built package found for ${PKG}"
+            exit 1
+          fi
+
+          echo "Linting: $pkg_file"
+          sbopkglint "$pkg_file"
