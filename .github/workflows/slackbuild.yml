@@ -199,13 +199,46 @@ jobs:
           echo "head_sha=$HEAD_SHA" >> "$GITHUB_OUTPUT"
           echo "Pushed branch $BRANCH (SHA: $HEAD_SHA)"
 
+  resolve-deps-dispatch:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    outputs:
+      slackpkg_deps: ${{ steps.deps.outputs.slackpkg_deps }}
+      sbopkg_deps: ${{ steps.deps.outputs.sbopkg_deps }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Parse pkgdefs for dependencies
+        id: deps
+        run: |
+          PKG="${{ inputs.package }}"
+          PKGDEFS="pkgdefs/${PKG}.json"
+
+          if [ ! -f "$PKGDEFS" ]; then
+            echo "No pkgdefs found for ${PKG}, no extra dependencies"
+            echo "slackpkg_deps=" >> "$GITHUB_OUTPUT"
+            echo "sbopkg_deps=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          SLACKPKG_DEPS=$(jq -r '.slackpkg_deps // [] | join(" ")' "$PKGDEFS")
+          SBOPKG_DEPS=$(jq -r '.sbopkg_deps // [] | join(" ")' "$PKGDEFS")
+
+          echo "slackpkg_deps=$SLACKPKG_DEPS" >> "$GITHUB_OUTPUT"
+          echo "sbopkg_deps=$SBOPKG_DEPS" >> "$GITHUB_OUTPUT"
+          echo "Resolved slackpkg_deps: $SLACKPKG_DEPS"
+          echo "Resolved sbopkg_deps: $SBOPKG_DEPS"
+
   build-validation:
     if: github.event_name == 'workflow_dispatch'
-    needs: update-metadata
+    needs: [update-metadata, resolve-deps-dispatch]
     uses: ./.github/workflows/build-package.yml
     with:
       package: ${{ inputs.package }}
       ref: refs/heads/update/${{ inputs.package }}-${{ inputs.version }}
+      slackpkg_deps: ${{ needs.resolve-deps-dispatch.outputs.slackpkg_deps }}
+      sbopkg_deps: ${{ needs.resolve-deps-dispatch.outputs.sbopkg_deps }}
 
   create-pr:
     if: github.event_name == 'workflow_dispatch'
@@ -332,12 +365,46 @@ jobs:
           echo "package=$MATCHED" >> "$GITHUB_OUTPUT"
           echo "Detected package: $MATCHED"
 
-  build-pr:
+  resolve-deps-pr:
     if: github.event_name == 'pull_request' && needs.detect-package.outputs.mode == 'build'
     needs: detect-package
+    runs-on: ubuntu-latest
+    outputs:
+      slackpkg_deps: ${{ steps.deps.outputs.slackpkg_deps }}
+      sbopkg_deps: ${{ steps.deps.outputs.sbopkg_deps }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Parse pkgdefs for dependencies
+        id: deps
+        run: |
+          PKG="${{ needs.detect-package.outputs.package }}"
+          PKGDEFS="pkgdefs/${PKG}.json"
+
+          if [ ! -f "$PKGDEFS" ]; then
+            echo "No pkgdefs found for ${PKG}, no extra dependencies"
+            echo "slackpkg_deps=" >> "$GITHUB_OUTPUT"
+            echo "sbopkg_deps=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          SLACKPKG_DEPS=$(jq -r '.slackpkg_deps // [] | join(" ")' "$PKGDEFS")
+          SBOPKG_DEPS=$(jq -r '.sbopkg_deps // [] | join(" ")' "$PKGDEFS")
+
+          echo "slackpkg_deps=$SLACKPKG_DEPS" >> "$GITHUB_OUTPUT"
+          echo "sbopkg_deps=$SBOPKG_DEPS" >> "$GITHUB_OUTPUT"
+          echo "Resolved slackpkg_deps: $SLACKPKG_DEPS"
+          echo "Resolved sbopkg_deps: $SBOPKG_DEPS"
+
+  build-pr:
+    if: github.event_name == 'pull_request' && needs.detect-package.outputs.mode == 'build'
+    needs: [detect-package, resolve-deps-pr]
     uses: ./.github/workflows/build-package.yml
     with:
       package: ${{ needs.detect-package.outputs.package }}
+      slackpkg_deps: ${{ needs.resolve-deps-pr.outputs.slackpkg_deps }}
+      sbopkg_deps: ${{ needs.resolve-deps-pr.outputs.sbopkg_deps }}
 
   pr-build-status:
     if: github.event_name == 'pull_request' && needs.detect-package.outputs.mode == 'build' && always()

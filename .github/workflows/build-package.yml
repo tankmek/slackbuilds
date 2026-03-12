@@ -10,6 +10,14 @@ on:
         required: false
         type: string
         default: ''
+      slackpkg_deps:
+        required: false
+        type: string
+        default: ''
+      sbopkg_deps:
+        required: false
+        type: string
+        default: ''
 
 jobs:
   build-package:
@@ -35,41 +43,20 @@ jobs:
             gcc gcc-g++ make cmake autoconf automake libtool pkg-config \
             binutils gettext kernel-headers m4 glibc-i18n glibc-profile
 
-      - name: Install jq via sbopkg
+      - name: Install slackpkg dependencies
+        if: inputs.slackpkg_deps != ''
+        run: |
+          echo "Installing slackpkg dependencies: ${{ inputs.slackpkg_deps }}"
+          echo y | slackpkg install ${{ inputs.slackpkg_deps }}
+
+      - name: Install sbopkg dependencies
+        if: inputs.sbopkg_deps != ''
         run: |
           sbopkg -r
-          sbopkg -B -i jq
-          if ! command -v jq >/dev/null 2>&1; then
-            echo "Error: jq is not available after sbopkg install"
-            exit 1
-          fi
-          echo "jq installed successfully: $(jq --version)"
-
-      - name: Install package-specific dependencies
-        run: |
-          PKG="${{ inputs.package }}"
-          PKGDEFS="pkgdefs/${PKG}.json"
-
-          if [ ! -f "$PKGDEFS" ]; then
-            echo "No pkgdefs found for ${PKG}, skipping dependency install"
-            exit 0
-          fi
-
-          SLACKPKG_DEPS=$(jq -r '.slackpkg_deps // [] | .[]' "$PKGDEFS")
-          if [ -n "$SLACKPKG_DEPS" ]; then
-            echo "Installing slackpkg dependencies: $SLACKPKG_DEPS"
-            echo y | slackpkg install $SLACKPKG_DEPS
-          fi
-
-          SBOPKG_DEPS=$(jq -r '.sbopkg_deps // [] | .[]' "$PKGDEFS")
-          if [ -n "$SBOPKG_DEPS" ]; then
-            echo "Refreshing SBo repository"
-            sbopkg -r
-            for dep in $SBOPKG_DEPS; do
-              echo "Installing sbopkg dependency: $dep"
-              sbopkg -B -i "$dep"
-            done
-          fi
+          for dep in ${{ inputs.sbopkg_deps }}; do
+            echo "Installing sbopkg dependency: $dep"
+            sbopkg -B -i "$dep"
+          done
 
       - name: Copy package to build directory
         run: |
