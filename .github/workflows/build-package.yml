@@ -10,6 +10,14 @@ on:
         required: false
         type: string
         default: ''
+      slackpkg_deps:
+        required: false
+        type: string
+        default: ''
+      sbopkg_deps:
+        required: false
+        type: string
+        default: ''
 
 jobs:
   build-package:
@@ -28,38 +36,28 @@ jobs:
         run: |
           echo y | slackpkg gpg update
           echo y | slackpkg update
+          echo y | slackpkg upgrade-all
 
       - name: Install baseline build tools
         run: |
           echo y | slackpkg install \
             gcc gcc-g++ make cmake autoconf automake libtool pkg-config \
-            binutils gettext kernel-headers m4 glibc-i18n glibc-profile jq
+            binutils gettext kernel-headers m4 glibc-i18n glibc-profile
 
-      - name: Install package-specific dependencies
+      - name: Install slackpkg dependencies
+        if: inputs.slackpkg_deps != ''
         run: |
-          PKG="${{ inputs.package }}"
-          PKGDEFS="pkgdefs/${PKG}.json"
+          echo "Installing slackpkg dependencies: ${{ inputs.slackpkg_deps }}"
+          echo y | slackpkg install ${{ inputs.slackpkg_deps }}
 
-          if [ ! -f "$PKGDEFS" ]; then
-            echo "No pkgdefs found for ${PKG}, skipping dependency install"
-            exit 0
-          fi
-
-          SLACKPKG_DEPS=$(jq -r '.slackpkg_deps // [] | .[]' "$PKGDEFS")
-          if [ -n "$SLACKPKG_DEPS" ]; then
-            echo "Installing slackpkg dependencies: $SLACKPKG_DEPS"
-            echo y | slackpkg install $SLACKPKG_DEPS
-          fi
-
-          SBOPKG_DEPS=$(jq -r '.sbopkg_deps // [] | .[]' "$PKGDEFS")
-          if [ -n "$SBOPKG_DEPS" ]; then
-            echo "Refreshing SBo repository"
-            sbopkg -r
-            for dep in $SBOPKG_DEPS; do
-              echo "Installing sbopkg dependency: $dep"
-              echo p | sbopkg -i "$dep"
-            done
-          fi
+      - name: Install sbopkg dependencies
+        if: inputs.sbopkg_deps != ''
+        run: |
+          sbopkg -r
+          for dep in ${{ inputs.sbopkg_deps }}; do
+            echo "Installing sbopkg dependency: $dep"
+            sbopkg -B -i "$dep"
+          done
 
       - name: Copy package to build directory
         run: |
@@ -105,7 +103,7 @@ jobs:
 
           echo "Installing sbo-maintainer-tools"
           sbopkg -r || true
-          echo p | sbopkg -i sbo-maintainer-tools
+          sbopkg -B -i sbo-maintainer-tools
 
           pkg_file=$(find /tmp -maxdepth 1 -name "${PKG}-*.t?z" | head -n1)
           if [ -z "$pkg_file" ]; then
