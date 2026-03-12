@@ -38,7 +38,7 @@ jobs:
       - name: Install jq via sbopkg
         run: |
           sbopkg -r
-          echo p | sbopkg -i jq
+          sbopkg -B -i jq
           if ! command -v jq >/dev/null 2>&1; then
             echo "Error: jq is not available after sbopkg install"
             exit 1
@@ -67,7 +67,7 @@ jobs:
             sbopkg -r
             for dep in $SBOPKG_DEPS; do
               echo "Installing sbopkg dependency: $dep"
-              echo p | sbopkg -i "$dep"
+              sbopkg -B -i "$dep"
             done
           fi
 
@@ -115,7 +115,7 @@ jobs:
 
           echo "Installing sbo-maintainer-tools"
           sbopkg -r || true
-          echo p | sbopkg -i sbo-maintainer-tools
+          sbopkg -B -i sbo-maintainer-tools
 
           pkg_file=$(find /tmp -maxdepth 1 -name "${PKG}-*.t?z" | head -n1)
           if [ -z "$pkg_file" ]; then
