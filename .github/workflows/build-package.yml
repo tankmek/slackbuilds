@@ -33,7 +33,17 @@ jobs:
         run: |
           echo y | slackpkg install \
             gcc gcc-g++ make cmake autoconf automake libtool pkg-config \
-            binutils gettext kernel-headers m4 glibc-i18n glibc-profile jq
+            binutils gettext kernel-headers m4 glibc-i18n glibc-profile
+
+      - name: Install jq via sbopkg
+        run: |
+          sbopkg -r
+          echo p | sbopkg -i jq
+          if ! command -v jq >/dev/null 2>&1; then
+            echo "Error: jq is not available after sbopkg install"
+            exit 1
+          fi
+          echo "jq installed successfully: $(jq --version)"
 
       - name: Install package-specific dependencies
         run: |
