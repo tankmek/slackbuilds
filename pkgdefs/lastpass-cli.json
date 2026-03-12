@@ -1,0 +1,5 @@
+{
+  "download_fmt": "https://github.com/lastpass/lastpass-cli/archive/v%v.tar.gz",
+  "slackpkg_deps": [],
+  "sbopkg_deps": []
+}

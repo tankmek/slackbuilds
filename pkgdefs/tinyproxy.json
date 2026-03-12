@@ -1,0 +1,5 @@
+{
+  "download_fmt": "https://github.com/tinyproxy/tinyproxy/releases/download/%v/tinyproxy-%v.tar.xz",
+  "slackpkg_deps": [],
+  "sbopkg_deps": []
+}

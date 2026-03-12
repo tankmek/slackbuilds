@@ -1,4 +1,5 @@
 {
   "download_fmt": "https://download.zeek.org/zeek-%v.tar.gz",
-  "tarball_fmt": "zeek.tar"
+  "slackpkg_deps": ["ninja", "flex", "bison", "swig", "python3", "python3-pip", "openssl", "zlib", "bzip2", "libpcap", "libcurl", "libssh", "jemalloc", "guile", "libarchive", "gc", "libxml2", "glibc-zoneinfo", "sqlite", "dbus", "dbus-glib", "dbus-python", "libnl3", "bind", "libuv", "lmdb", "icu4c"],
+  "sbopkg_deps": ["zeromq"]
 }

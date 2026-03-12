@@ -1,4 +1,5 @@
 {
   "download_fmt": "https://github.com/USBGuard/usbguard/releases/download/usbguard-%v/usbguard-%v.tar.gz",
-  "tarball_fmt": "usbguard.tar"
+  "slackpkg_deps": [],
+  "sbopkg_deps": ["protobuf", "libqb", "libsodium"]
 }

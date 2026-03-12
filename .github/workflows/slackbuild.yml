@@ -1,0 +1,417 @@
+name: SlackBuild Update Pipeline
+
+on:
+  workflow_dispatch:
+    inputs:
+      package:
+        description: 'Package to update'
+        required: true
+        type: choice
+        options:
+          - arping
+          - dirb
+          - fpc-source
+          - lastpass-cli
+          - tinyproxy
+          - usbguard
+          - zeek
+      version:
+        description: 'New version'
+        required: true
+        type: string
+
+  pull_request:
+    branches:
+      - master
+
+permissions:
+  contents: write
+  pull-requests: write
+  statuses: write
+
+jobs:
+  # ============================================================
+  # WORKFLOW_DISPATCH JOBS
+  # ============================================================
+
+  update-metadata:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    outputs:
+      branch_name: ${{ steps.push-branch.outputs.branch_name }}
+      head_sha: ${{ steps.push-branch.outputs.head_sha }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate inputs
+        run: |
+          PKG="${{ inputs.package }}"
+          CONF="pkgdefs/${PKG}.json"
+          INFO="${PKG}/${PKG}.info"
+          BUILD="${PKG}/${PKG}.SlackBuild"
+
+          for f in "$CONF" "$INFO" "$BUILD"; do
+            if [ ! -f "$f" ]; then
+              echo "Error: Missing required file: $f"
+              exit 1
+            fi
+          done
+          echo "All required files exist for ${PKG}"
+
+      - name: Construct download URL
+        id: url
+        run: |
+          PKG="${{ inputs.package }}"
+          VERSION="${{ inputs.version }}"
+          CONF="pkgdefs/${PKG}.json"
+
+          DOWNLOAD_FMT=$(jq -r '.download_fmt // empty' "$CONF")
+          if [ -z "$DOWNLOAD_FMT" ]; then
+            echo "Error: download_fmt not found in $CONF"
+            exit 1
+          fi
+
+          VERSION_NODOT=$(jq -r '.version_nodot // false' "$CONF")
+
+          URL=$(echo "$DOWNLOAD_FMT" | sed "s/%v/$VERSION/g")
+
+          if [ "$VERSION_NODOT" = "true" ]; then
+            NODOT=$(echo "$VERSION" | tr -d '.')
+            URL=$(echo "$URL" | sed "s/%V/$NODOT/g")
+            echo "effective_version=$NODOT" >> "$GITHUB_OUTPUT"
+          else
+            echo "effective_version=$VERSION" >> "$GITHUB_OUTPUT"
+          fi
+
+          echo "url=$URL" >> "$GITHUB_OUTPUT"
+          echo "Download URL: $URL"
+
+      - name: Download source archive
+        run: |
+          URL="${{ steps.url.outputs.url }}"
+          echo "Downloading: $URL"
+          curl -fsSL -o /tmp/source-archive "$URL"
+
+      - name: Compute MD5
+        id: md5
+        run: |
+          MD5=$(md5sum /tmp/source-archive | awk '{print $1}')
+          echo "md5=$MD5" >> "$GITHUB_OUTPUT"
+          echo "MD5: $MD5"
+
+      - name: Update .info file
+        run: |
+          PKG="${{ inputs.package }}"
+          INFO="${PKG}/${PKG}.info"
+          EFF_VERSION="${{ steps.url.outputs.effective_version }}"
+          URL="${{ steps.url.outputs.url }}"
+          MD5="${{ steps.md5.outputs.md5 }}"
+
+          sed -i "s|^VERSION=.*|VERSION=\"${EFF_VERSION}\"|" "$INFO"
+          sed -i "s|^DOWNLOAD=.*|DOWNLOAD=\"${URL}\"|" "$INFO"
+          sed -i "s|^MD5SUM=.*|MD5SUM=\"${MD5}\"|" "$INFO"
+
+          # Update x86_64 fields only if they currently have values
+          if grep -q '^DOWNLOAD_x86_64="[^"]' "$INFO"; then
+            sed -i "s|^DOWNLOAD_x86_64=.*|DOWNLOAD_x86_64=\"${URL}\"|" "$INFO"
+          fi
+          if grep -q '^MD5SUM_x86_64="[^"]' "$INFO"; then
+            sed -i "s|^MD5SUM_x86_64=.*|MD5SUM_x86_64=\"${MD5}\"|" "$INFO"
+          fi
+
+          echo "Updated $INFO:"
+          cat "$INFO"
+
+      - name: Update SlackBuild version
+        run: |
+          PKG="${{ inputs.package }}"
+          BUILD="${PKG}/${PKG}.SlackBuild"
+          EFF_VERSION="${{ steps.url.outputs.effective_version }}"
+
+          if ! grep -q '^VERSION=${VERSION:-' "$BUILD"; then
+            echo "Error: VERSION line does not match expected pattern in $BUILD"
+            echo "Expected: VERSION=\${VERSION:-...}"
+            echo "Found:"
+            grep '^VERSION=' "$BUILD" || echo "(no VERSION line found)"
+            exit 1
+          fi
+
+          sed -i "s|^VERSION=\${VERSION:-.*}|VERSION=\${VERSION:-${EFF_VERSION}}|" "$BUILD"
+
+          echo "Updated $BUILD:"
+          grep '^VERSION=' "$BUILD"
+
+      - name: Validate changes
+        run: |
+          PKG="${{ inputs.package }}"
+          EFF_VERSION="${{ steps.url.outputs.effective_version }}"
+          URL="${{ steps.url.outputs.url }}"
+          MD5="${{ steps.md5.outputs.md5 }}"
+
+          INFO="${PKG}/${PKG}.info"
+          BUILD="${PKG}/${PKG}.SlackBuild"
+
+          # Validate .info
+          grep -q "^VERSION=\"${EFF_VERSION}\"" "$INFO" || { echo "VERSION not updated in .info"; exit 1; }
+          grep -q "^DOWNLOAD=\"${URL}\"" "$INFO" || { echo "DOWNLOAD not updated in .info"; exit 1; }
+          grep -q "^MD5SUM=\"${MD5}\"" "$INFO" || { echo "MD5SUM not updated in .info"; exit 1; }
+
+          # Validate .SlackBuild
+          grep -q "^VERSION=\${VERSION:-${EFF_VERSION}}" "$BUILD" || { echo "VERSION not updated in .SlackBuild"; exit 1; }
+
+          echo "All validations passed"
+
+      - name: Create submission archive
+        run: |
+          PKG="${{ inputs.package }}"
+          tar -czf "${PKG}.tar.gz" "${PKG}/"
+          echo "Created ${PKG}.tar.gz"
+          tar -tzf "${PKG}.tar.gz" | head -20
+
+      - name: Upload submission archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.package }}-slackbuild
+          path: ${{ inputs.package }}.tar.gz
+          retention-days: 7
+
+      - name: Create branch and push
+        id: push-branch
+        run: |
+          PKG="${{ inputs.package }}"
+          VERSION="${{ inputs.version }}"
+          BRANCH="update/${PKG}-${VERSION}"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git checkout -b "$BRANCH"
+          git add "${PKG}/${PKG}.info" "${PKG}/${PKG}.SlackBuild"
+          git commit -m "${PKG}: update to ${VERSION}"
+          git push origin "$BRANCH"
+
+          HEAD_SHA=$(git rev-parse HEAD)
+          echo "branch_name=$BRANCH" >> "$GITHUB_OUTPUT"
+          echo "head_sha=$HEAD_SHA" >> "$GITHUB_OUTPUT"
+          echo "Pushed branch $BRANCH (SHA: $HEAD_SHA)"
+
+  build-validation:
+    if: github.event_name == 'workflow_dispatch'
+    needs: update-metadata
+    uses: ./.github/workflows/build-package.yml
+    with:
+      package: ${{ inputs.package }}
+      ref: refs/heads/update/${{ inputs.package }}-${{ inputs.version }}
+
+  create-pr:
+    if: github.event_name == 'workflow_dispatch'
+    needs: build-validation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout update branch
+        uses: actions/checkout@v4
+        with:
+          ref: update/${{ inputs.package }}-${{ inputs.version }}
+
+      - name: Get HEAD SHA
+        id: sha
+        run: |
+          SHA=$(git rev-parse HEAD)
+          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+          echo "HEAD SHA: $SHA"
+
+      - name: Attach commit status
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          SHA="${{ steps.sha.outputs.sha }}"
+          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+          gh api "repos/${{ github.repository }}/statuses/${SHA}" \
+            -f context="build-package" \
+            -f state="success" \
+            -f description="Package built and linted successfully in Slackware 15.0" \
+            -f target_url="$RUN_URL"
+
+          echo "Attached build-package status to $SHA"
+
+      - name: Create pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          PKG="${{ inputs.package }}"
+          VERSION="${{ inputs.version }}"
+
+          PR_URL=$(gh pr create \
+            --base master \
+            --head "update/${PKG}-${VERSION}" \
+            --title "${PKG}: update to ${VERSION}" \
+            --body "Automated update of ${PKG} to version ${VERSION}.")
+
+          echo "Created PR: $PR_URL"
+
+          gh pr merge --auto --squash "$PR_URL"
+          echo "Auto-merge enabled"
+
+  # ============================================================
+  # PULL_REQUEST JOBS
+  # ============================================================
+
+  detect-package:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    outputs:
+      package: ${{ steps.detect.outputs.package }}
+      mode: ${{ steps.detect.outputs.mode }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect changed package
+        id: detect
+        run: |
+          KNOWN_PACKAGES="arping dirb fpc-source lastpass-cli tinyproxy usbguard zeek"
+
+          CHANGED_FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD)
+          echo "Changed files:"
+          echo "$CHANGED_FILES"
+
+          # Collect implicated packages from both package dirs and pkgdefs/
+          MATCHED=""
+          for file in $CHANGED_FILES; do
+            PKG=""
+
+            # pkgdefs/<package>.json -> resolve to <package>
+            case "$file" in
+              pkgdefs/*.json)
+                PKG=$(basename "$file" .json)
+                ;;
+              */*)
+                PKG=$(echo "$file" | cut -d'/' -f1)
+                ;;
+            esac
+
+            [ -z "$PKG" ] && continue
+
+            for known in $KNOWN_PACKAGES; do
+              if [ "$PKG" = "$known" ]; then
+                # Add if not already in list
+                case " $MATCHED " in
+                  *" $known "*) ;;
+                  *) MATCHED="${MATCHED:+$MATCHED }$known" ;;
+                esac
+              fi
+            done
+          done
+
+          if [ -z "$MATCHED" ]; then
+            echo "No maintained package implicated by this PR"
+            echo "mode=skip" >> "$GITHUB_OUTPUT"
+            echo "package=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          COUNT=$(echo "$MATCHED" | wc -w | tr -d ' ')
+          if [ "$COUNT" -gt 1 ]; then
+            echo "::error::More than one maintained package implicated: $MATCHED"
+            echo "Only single-package PRs are supported by the package validation workflow."
+            echo "mode=error" >> "$GITHUB_OUTPUT"
+            echo "package=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "mode=build" >> "$GITHUB_OUTPUT"
+          echo "package=$MATCHED" >> "$GITHUB_OUTPUT"
+          echo "Detected package: $MATCHED"
+
+  build-pr:
+    if: github.event_name == 'pull_request' && needs.detect-package.outputs.mode == 'build'
+    needs: detect-package
+    uses: ./.github/workflows/build-package.yml
+    with:
+      package: ${{ needs.detect-package.outputs.package }}
+
+  pr-build-status:
+    if: github.event_name == 'pull_request' && needs.detect-package.outputs.mode == 'build' && always()
+    needs: [detect-package, build-pr]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Post build-package commit status
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          SHA="${{ github.event.pull_request.head.sha }}"
+          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+          if [ "${{ needs.build-pr.result }}" = "success" ]; then
+            STATE="success"
+            DESC="Package built and linted successfully in Slackware 15.0"
+          else
+            STATE="failure"
+            DESC="Package build validation failed"
+          fi
+
+          gh api "repos/${{ github.repository }}/statuses/${SHA}" \
+            -f context="build-package" \
+            -f state="$STATE" \
+            -f description="$DESC" \
+            -f target_url="$RUN_URL"
+
+          echo "Posted build-package status ($STATE) to $SHA"
+
+          # Fail this job if the build failed
+          if [ "$STATE" != "success" ]; then
+            exit 1
+          fi
+
+  skip-build:
+    if: github.event_name == 'pull_request' && needs.detect-package.outputs.mode == 'skip'
+    needs: detect-package
+    runs-on: ubuntu-latest
+    steps:
+      - name: No package build required
+        run: echo "No maintained package build required for this PR."
+
+      - name: Post build-package commit status
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          SHA="${{ github.event.pull_request.head.sha }}"
+          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+          gh api "repos/${{ github.repository }}/statuses/${SHA}" \
+            -f context="build-package" \
+            -f state="success" \
+            -f description="No maintained package build required for this PR" \
+            -f target_url="$RUN_URL"
+
+          echo "Posted build-package skip status to $SHA"
+
+  pr-error-status:
+    if: github.event_name == 'pull_request' && needs.detect-package.outputs.mode == 'error'
+    needs: detect-package
+    runs-on: ubuntu-latest
+    steps:
+      - name: Post build-package failure status
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          SHA="${{ github.event.pull_request.head.sha }}"
+          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+          gh api "repos/${{ github.repository }}/statuses/${SHA}" \
+            -f context="build-package" \
+            -f state="failure" \
+            -f description="Multiple maintained packages changed; only single-package PRs are supported" \
+            -f target_url="$RUN_URL"
+
+          echo "Posted build-package error status to $SHA"
+          exit 1

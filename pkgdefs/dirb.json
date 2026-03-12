@@ -1,0 +1,6 @@
+{
+  "download_fmt": "https://downloads.sourceforge.net/project/dirb/dirb/%v/dirb%V.tar.gz",
+  "version_nodot": true,
+  "slackpkg_deps": [],
+  "sbopkg_deps": []
+}
