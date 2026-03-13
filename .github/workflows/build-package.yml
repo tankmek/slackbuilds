@@ -106,7 +106,11 @@ jobs:
           sbopkg -r || true
           sbopkg -B -i sbo-maintainer-tools
 
-          pkg_file=$(find /tmp -maxdepth 1 -name "${PKG}-*.t?z" | head -n1)
+          if [ -f "/tmp/SBo/${PKG}/${PKG}.info" ]; then
+            VERSION=$(grep '^VERSION=' "/tmp/SBo/${PKG}/${PKG}.info" | cut -d'"' -f2)
+          fi
+
+          pkg_file=$(find /tmp -maxdepth 1 -name "${PKG}-${VERSION}-*.t?z" | head -n1)
           if [ -z "$pkg_file" ]; then
             echo "Error: No built package found for ${PKG}"
             exit 1
