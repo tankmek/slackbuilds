@@ -13,8 +13,8 @@
     "abseil-cpp",
     "libqb",
     "python3-flit_core",
-    "python3-pyproject-hooks",
     "python3-installer",
+    "python3-pyproject-hooks",
     "python3-wheel",
     "python3-build",
     "protobuf3"
