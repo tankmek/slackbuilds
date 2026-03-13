@@ -44,7 +44,7 @@ jobs:
             gcc gcc-g++ make cmake autoconf automake libtool pkg-config \
             binutils gettext kernel-headers m4 glibc-i18n glibc-profile \
             guile gc libgcrypt patch libarchive libxml2 flex expat python-tomli \
-            python-setuptools libsodium
+            python-setuptools libsodium libqb
 
       - name: Install slackpkg dependencies
         if: inputs.slackpkg_deps != ''
