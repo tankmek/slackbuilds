@@ -1,10 +1,17 @@
 {
   "download_fmt": "https://github.com/USBGuard/usbguard/releases/download/usbguard-%v/usbguard-%v.tar.gz",
-  "slackpkg_deps": [],
+  "slackpkg_deps": [
+    "python-tomli",
+    "libsodium",
+    "libarchive", 
+    "libxml2", 
+    "flex", 
+    "expat", 
+    "python-setuptools"
+  ],
   "sbopkg_deps": [
     "abseil-cpp",
     "libqb",
-    "libsodium",
     "python3-build",
     "python3-flit_core",
     "python3-installer",
