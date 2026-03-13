@@ -43,7 +43,7 @@ jobs:
           echo y | slackpkg install \
             gcc gcc-g++ make cmake autoconf automake libtool pkg-config \
             binutils gettext kernel-headers m4 glibc-i18n glibc-profile \
-            guile gc libgcrypt
+            guile gc libgcrypt patch
 
       - name: Install slackpkg dependencies
         if: inputs.slackpkg_deps != ''
