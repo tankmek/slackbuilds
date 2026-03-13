@@ -211,24 +211,7 @@ jobs:
 
       - name: Parse pkgdefs for dependencies
         id: deps
-        run: |
-          PKG="${{ inputs.package }}"
-          PKGDEFS="pkgdefs/${PKG}.json"
-
-          if [ ! -f "$PKGDEFS" ]; then
-            echo "No pkgdefs found for ${PKG}, no extra dependencies"
-            echo "slackpkg_deps=" >> "$GITHUB_OUTPUT"
-            echo "sbopkg_deps=" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          SLACKPKG_DEPS=$(jq -r '.slackpkg_deps // [] | join(" ")' "$PKGDEFS")
-          SBOPKG_DEPS=$(jq -r '.sbopkg_deps // [] | join(" ")' "$PKGDEFS")
-
-          echo "slackpkg_deps=$SLACKPKG_DEPS" >> "$GITHUB_OUTPUT"
-          echo "sbopkg_deps=$SBOPKG_DEPS" >> "$GITHUB_OUTPUT"
-          echo "Resolved slackpkg_deps: $SLACKPKG_DEPS"
-          echo "Resolved sbopkg_deps: $SBOPKG_DEPS"
+        run: bash ./scripts/resolve-pkgdeps.sh "${{ inputs.package }}"
 
   build-validation:
     if: github.event_name == 'workflow_dispatch'
@@ -386,24 +369,7 @@ jobs:
 
       - name: Parse pkgdefs for dependencies
         id: deps
-        run: |
-          PKG="${{ needs.detect-package.outputs.package }}"
-          PKGDEFS="pkgdefs/${PKG}.json"
-
-          if [ ! -f "$PKGDEFS" ]; then
-            echo "No pkgdefs found for ${PKG}, no extra dependencies"
-            echo "slackpkg_deps=" >> "$GITHUB_OUTPUT"
-            echo "sbopkg_deps=" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          SLACKPKG_DEPS=$(jq -r '.slackpkg_deps // [] | join(" ")' "$PKGDEFS")
-          SBOPKG_DEPS=$(jq -r '.sbopkg_deps // [] | join(" ")' "$PKGDEFS")
-
-          echo "slackpkg_deps=$SLACKPKG_DEPS" >> "$GITHUB_OUTPUT"
-          echo "sbopkg_deps=$SBOPKG_DEPS" >> "$GITHUB_OUTPUT"
-          echo "Resolved slackpkg_deps: $SLACKPKG_DEPS"
-          echo "Resolved sbopkg_deps: $SBOPKG_DEPS"
+        run: bash ./scripts/resolve-pkgdeps.sh "${{ needs.detect-package.outputs.package }}"
 
   build-pr:
     if: github.event_name == 'pull_request' && needs.detect-package.outputs.mode == 'build'
