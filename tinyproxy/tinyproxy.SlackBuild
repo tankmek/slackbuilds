@@ -84,6 +84,7 @@ CXXFLAGS="$SLKCFLAGS" \
   --enable-upstream \
   --enable-reverse \
   --enable-transparent \
+  --disable-dependency-tracking \
   --build=$ARCH-slackware-linux
 
 make
