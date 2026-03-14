@@ -43,7 +43,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
@@ -173,7 +173,7 @@ jobs:
           tar -tzf "${PKG}.tar.gz" | head -20
 
       - name: Upload submission archive
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: ${{ inputs.package }}-slackbuild
           path: ${{ inputs.package }}.tar.gz
@@ -208,7 +208,7 @@ jobs:
       sbopkg_deps: ${{ steps.deps.outputs.sbopkg_deps }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Parse pkgdefs for dependencies
         id: deps
@@ -231,7 +231,7 @@ jobs:
 
     steps:
       - name: Checkout update branch
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: update/${{ inputs.package }}-${{ inputs.version }}
 
@@ -292,7 +292,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
@@ -362,7 +362,7 @@ jobs:
       sbopkg_deps: ${{ steps.deps.outputs.sbopkg_deps }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Parse pkgdefs for dependencies
         id: deps
