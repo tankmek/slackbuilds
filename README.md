@@ -1,73 +1,63 @@
-[![Hits](https://hits.seeyoufarm.com/api/count/incr/badge.svg?url=https%3A%2F%2Fgithub.com%2Ftankmek%2FSlackBuilds&count_bg=%2379C83D&title_bg=%23555555&icon=&icon_color=%233A57E7&title=hits&edge_flat=false)](https://hits.seeyoufarm.com)
+[![CI](https://github.com/tankmek/slackbuilds/actions/workflows/slackbuild.yml/badge.svg)](https://github.com/tankmek/slackbuilds/actions/workflows/slackbuild.yml)
+[![License: BSD-2-Clause](https://img.shields.io/badge/License-BSD_2--Clause-blue.svg)](https://opensource.org/licenses/BSD-2-Clause)
 
-# SlackBuilds Maintained
-=======
+# slackbuilds
 
-This repository hosts my contributions to the
-[SlackBuilds.org](https://www.slackbuilds.org) project, providing build
-scripts for various software packages on Slackware Linux.
+Personal maintainer workspace for [SlackBuilds.org](https://slackbuilds.org/) contributions. This repository holds build scripts, CI automation, and version history for packages maintained by Michael Edie.
 
-Leveraging SlackBuilds ensures a transparent and reproducible build process,
-aligning with Slackware's philosophy of clarity and control.
+## What this repo is
 
-## Available Packages
+- Maintainer workspace for developing and testing SlackBuild scripts
+- CI validation via GitHub Actions (Slackware 15.0 container, sbopkglint)
+- Version history and update tracking
+- Automated version bump workflow
 
-| Package        | Description                                                         |
-|----------------|---------------------------------------------------------------------|
-| `dirb`         | Utility for web content discovery, valuable for security            |
-|                | assessments.                                                        |
-| `dnsmasq`      | Lightweight DNS forwarder and DHCP server, ideal for local          |
-|                | networks.                                                           |
-| `fpc-source`   | Source distribution of the Free Pascal Compiler.                    |
-| `lastpass-cli` | Command-line interface for secure password management via           |
-|                | LastPass.                                                           |
-| `usbguard`     | Framework for enforcing policies on USB device access.              |
-| `zeek`         | Powerful, open-source network security monitoring engine.           |
-=======
+## What this repo is not
 
-## Installation Recommendations
+This is **not** the canonical source for these SlackBuilds. Users should install packages from [SlackBuilds.org](https://slackbuilds.org/). Versions here may differ from what is published upstream.
 
-For efficient management and installation of these and a broader range of
-SlackBuilds, the [`sbotools`](https://pink-mist.github.io/sbotools/) suite is
-the recommended approach.
-```bash
-sudo sbopkg -r
-sudo sbopkg -i zeek
+## Repository layout
+
+```
+<package>/          SlackBuild script, .info, slack-desc, and package files
+pkgdefs/            JSON configs for download URLs and dependencies
+scripts/            Automation helpers
+.github/workflows/  CI pipelines for build validation and version updates
 ```
 
-## Manual Build Procedure
+## Maintained packages
 
-For building individual packages directly:
+The following table is generated from SlackBuild metadata in the repository.
 
-1. **Clone the repository:**
-   ```bash
-   cd /tmp
-   git clone https://github.com/tankmek/SlackBuilds.git
-   cd SlackBuilds/<package_name>
-   ```
+| Package | Version | Description | Slackware | Status |
+|---|---|---|---|---|
+| arping | 2.20 | ARP and IP ping utility | 15.0 | maintained |
+| coolkey | 1.1.0 | PKCS#11 smart card library | 15.0 | maintained |
+| dirb | 222 | Web content scanner | 15.0 | maintained |
+| fpc-source | 3.2.2 | Free Pascal Compiler source | 15.0 | maintained |
+| lastpass-cli | 1.6.1 | LastPass command-line client | 15.0 | maintained |
+| nbtscan | 1.0.35 | NetBIOS nameserver scanner | 15.0 | maintained |
+| nwipe | 0.34 | Secure disk eraser | 15.0 | maintained |
+| tinyproxy | 1.11.3 | Lightweight HTTP proxy | 15.0 | maintained |
+| usbguard | 1.1.3 | USB device access policy framework | 15.0 | maintained |
+| zeek | 8.0.6 | Network security monitor | 15.0 | maintained |
 
-2. **Retrieve Source:**
-   ```bash
-   export SOURCE_URL=$(grep DOWNLOAD= *.info | awk -F'"' '{print $2}')
-   curl -O "$SOURCE_URL"
-   ```
+## Development workflow
 
-3. **Verify Integrity:**
-   ```bash
-   grep MD5SUM= *.info | awk -F'=' '{print $2}' | tr -d '"'
-   md5sum "$(basename "$SOURCE_URL")" | awk '{print $1}'
-   # Confirm the output matches "$MD5_SUM"
-   ```
+- Do not commit directly to `main`
+- Create a feature branch for each package update or change
+- Open a Pull Request
+- CI workflows validate the build automatically
+- Merge after validation passes
 
-4. **Execute Build (requires root):**
-   ```bash
-   sudo su -
-   cd /tmp/SlackBuilds/<package_name>
-   chmod +x <package_name>.SlackBuild
-   ./<package_name>.SlackBuild
-   ```
+## Historical content
 
-   This generates a standard Slackware package (`.txz`) installable via
-   `installpkg`.
+This repo may contain older versions or legacy artifacts kept intentionally as part of the maintenance record.
 
----
+## Official source
+
+For installing these packages, visit [SlackBuilds.org](https://slackbuilds.org/).
+
+## Maintainer
+
+Michael Edie
