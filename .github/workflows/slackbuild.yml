@@ -192,6 +192,7 @@ jobs:
           git checkout -b "$BRANCH"
           git add "${PKG}/${PKG}.info" "${PKG}/${PKG}.SlackBuild"
           git commit -m "${PKG}: update to ${VERSION}"
+          git push origin --delete "$BRANCH" 2>/dev/null || true
           git push origin "$BRANCH"
 
           HEAD_SHA=$(git rev-parse HEAD)
@@ -271,15 +272,11 @@ jobs:
 
           echo "Created PR: $PR_URL"
 
-          PR_STATE=$(gh pr view "$PR_URL" --json mergeStateStatus --jq '.mergeStateStatus')
-          echo "PR merge state: $PR_STATE"
-
-          if [ "$PR_STATE" = "CLEAN" ]; then
-            gh pr merge --squash "$PR_URL"
-            echo "PR merged immediately"
-          else
+          if ! gh pr merge --squash "$PR_URL" 2>/dev/null; then
             gh pr merge --auto --squash "$PR_URL"
             echo "Auto-merge enabled"
+          else
+            echo "PR merged immediately"
           fi
 
   # ============================================================
