@@ -1,0 +1,5 @@
+{
+  "download_fmt": "http://www.unixwiz.net/tools/nbtscan-source-%v.tgz",
+  "slackpkg_deps": [],
+  "sbopkg_deps": []
+}

@@ -1,0 +1,5 @@
+{
+  "download_fmt": "http://ponce.cc/slackware/sources/repo/coolkey-%v.tar.gz",
+  "slackpkg_deps": [],
+  "sbopkg_deps": ["pcsc-lite"]
+}
