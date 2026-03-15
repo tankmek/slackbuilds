@@ -10,6 +10,7 @@
     "elogind",
     "polkit",
     "glib2",
+    "pcre",
     "libcap-ng",
     "flex", 
     "expat", 
