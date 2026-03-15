@@ -40,10 +40,11 @@ jobs:
 
       - name: Install baseline build tools
         run: |
-          echo y | slackpkg install \
-            gcc gcc-g++ make cmake autoconf automake libtool pkg-config \
+          BASELINE="gcc gcc-g++ make cmake autoconf automake libtool pkg-config \
             binutils gettext kernel-headers m4 glibc-i18n glibc-profile \
-            guile gc patch python3 libarchive diffutils || true
+            guile gc patch python3 libarchive diffutils"
+          echo y | slackpkg install $BASELINE || true
+          echo y | slackpkg upgrade $BASELINE || true
           ldconfig
 
       - name: Install slackpkg dependencies
@@ -51,6 +52,7 @@ jobs:
         run: |
           echo "Installing slackpkg dependencies: ${{ inputs.slackpkg_deps }}"
           echo y | slackpkg install ${{ inputs.slackpkg_deps }} || true
+          echo y | slackpkg upgrade ${{ inputs.slackpkg_deps }} || true
           ldconfig
 
       - name: Install sbopkg dependencies
