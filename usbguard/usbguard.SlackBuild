@@ -100,10 +100,8 @@ find $PKG -print0 | xargs -0 file | grep -e "executable" -e "shared object" | gr
 
 DOCS="VERSION LICENSE CHANGELOG.md README.adoc"
 
-if [ -d $PKG/usr/man ]; then
-  find $PKG/usr/man -type f -exec gzip -9 {} \;
-  for i in $( find $PKG/usr/man -type l ) ; do ln -s $( readlink $i ).gz $i.gz ; rm $i ; done
-fi
+find $PKG/usr/man -type f -exec gzip -9 {} \;
+for i in $( find $PKG/usr/man -type l ) ; do ln -s $( readlink $i ).gz $i.gz ; rm $i ; done
 
 install -D -m 0644 $CWD/config/usbguard.logrotate $PKG/etc/logrotate.d/usbguard.new
 install -D -m 0644 $CWD/config/rc.usbguard $PKG/etc/rc.d/rc.usbguard.new

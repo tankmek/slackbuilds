@@ -18,7 +18,8 @@
     "expat", 
     "pyparsing",
     "python-packaging",
-    "python-setuptools"
+    "python-setuptools",
+    "linuxdoc-tools"
   ],
   "sbopkg_deps": [
     "abseil-cpp",
