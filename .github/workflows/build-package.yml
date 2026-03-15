@@ -37,12 +37,13 @@ jobs:
           echo y | slackpkg gpg update
           echo y | slackpkg update
           echo y | slackpkg upgrade-all
+          ldconfig
 
       - name: Install baseline build tools
         run: |
           BASELINE="gcc gcc-g++ make cmake autoconf automake libtool pkg-config \
             binutils gettext kernel-headers m4 glibc-i18n glibc-profile \
-            guile gc patch python3 libarchive diffutils libssh2 pcre"
+            guile gc patch python3 libarchive diffutils libssh2 pcre libxml2"
           echo y | slackpkg install $BASELINE || true
           echo y | slackpkg upgrade $BASELINE || true
           ldconfig
