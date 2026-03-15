@@ -11,6 +11,7 @@
     "polkit",
     "glib2",
     "pcre",
+    "libffi",
     "libcap-ng",
     "flex", 
     "expat", 
