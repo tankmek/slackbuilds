@@ -1,5 +1,5 @@
 {
   "download_fmt": "http://www.habets.pp.se/synscan/files/arping-%v.tar.gz",
-  "slackpkg_deps": [],
+  "slackpkg_deps": ["libpcap"],
   "sbopkg_deps": ["libnet"]
 }
