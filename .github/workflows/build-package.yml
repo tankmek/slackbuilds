@@ -64,6 +64,35 @@ jobs:
             sbopkg -B -i "$dep"
           done
 
+      - name: Debug build environment
+        run: |
+          echo "=== gcc search paths ==="
+          gcc -print-search-dirs | grep libraries || true
+          echo ""
+          echo "=== ldconfig -p | grep curl ==="
+          ldconfig -p | grep -i curl || echo "no curl in ldconfig cache"
+          echo ""
+          echo "=== ls /usr/lib64/libcurl* ==="
+          ls -la /usr/lib64/libcurl* 2>/dev/null || echo "no libcurl in /usr/lib64"
+          echo ""
+          echo "=== ls /usr/lib/libcurl* ==="
+          ls -la /usr/lib/libcurl* 2>/dev/null || echo "no libcurl in /usr/lib"
+          echo ""
+          echo "=== curl-config --libs ==="
+          curl-config --libs 2>/dev/null || echo "curl-config not found"
+          echo ""
+          echo "=== pkg-config --libs libcurl ==="
+          pkg-config --libs libcurl 2>/dev/null || echo "libcurl.pc not found"
+          echo ""
+          echo "=== ls /usr/lib64/libpcap* ==="
+          ls -la /usr/lib64/libpcap* 2>/dev/null || echo "no libpcap in /usr/lib64"
+          echo ""
+          echo "=== ls /usr/lib64/pkgconfig/{dbus,gio,glib,polkit}* ==="
+          ls -la /usr/lib64/pkgconfig/dbus* /usr/lib64/pkgconfig/gio* /usr/lib64/pkgconfig/glib* /usr/lib64/pkgconfig/polkit* 2>/dev/null || echo "none found"
+          echo ""
+          echo "=== pkg-config pc_path ==="
+          pkg-config --variable pc_path pkg-config 2>/dev/null || echo "failed"
+
       - name: Copy package to build directory
         run: |
           PKG="${{ inputs.package }}"
