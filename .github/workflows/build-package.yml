@@ -91,7 +91,7 @@ jobs:
 
           # Strip query parameters from downloaded filenames (e.g. SourceForge ?viasf=1)
           for f in *\?*; do
-            [ -e "$f" ] && mv "$f" "${f%%\?*}"
+            [ -e "$f" ] && mv "$f" "${f%%\?*}" || true
           done
 
       - name: Run SlackBuild

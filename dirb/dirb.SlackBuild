@@ -80,7 +80,7 @@ find -L . \
 # Fix broken permissions
 chmod 755 configure
 
-CFLAGS="$SLKCFLAGS" \
+CFLAGS="$SLKCFLAGS -fcommon" \
   ./configure \
   --prefix=/usr \
   --localstatedir=/var \
