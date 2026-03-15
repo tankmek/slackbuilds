@@ -2,7 +2,7 @@
 
 # Slackware build script for lastpass-cli
 
-# Copyright 2019 Michael Edie Orlando, FL USA
+# Copyright 2019-2026 Michael Edie, USA
 # All rights reserved.
 #
 # Redistribution and use of this script, with or without modification, is
@@ -83,15 +83,19 @@ export CFLAGS+="$SLKCFLAGS -fcommon"
 
 make
 make install DESTDIR=$PKG
-make install-doc MANDIR=$PKG/usr/man
+if command -v a2x >/dev/null 2>&1; then
+  make install-doc MANDIR=$PKG/usr/man
+fi
 
 mkdir -p $PKG/usr/bin
 cp build/lpass $PKG/usr/bin
 
 strip --strip-unneeded $PKG/usr/bin/lpass 2> /dev/null || true
 
-find $PKG/usr/man -type f -exec gzip -9 {} \;
-for i in $( find $PKG/usr/man -type l ) ; do ln -s $( readlink $i ).gz $i.gz ; rm $i ; done
+if [ -d $PKG/usr/man ]; then
+  find $PKG/usr/man -type f -exec gzip -9 {} \;
+  for i in $( find $PKG/usr/man -type l ) ; do ln -s $( readlink $i ).gz $i.gz ; rm $i ; done
+fi
 
 mkdir -p $PKG/usr/doc/$PRGNAM-$VERSION
 cp -a CHANGELOG.md README.md COPYING CONTRIBUTING LICENSE.OpenSSL $PKG/usr/doc/$PRGNAM-$VERSION

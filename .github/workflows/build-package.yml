@@ -37,20 +37,24 @@ jobs:
           echo y | slackpkg gpg update
           echo y | slackpkg update
           echo y | slackpkg upgrade-all
+          ldconfig
 
       - name: Install baseline build tools
         run: |
-          echo y | slackpkg install \
-            gcc gcc-g++ make cmake autoconf automake libtool pkg-config \
+          BASELINE="gcc gcc-g++ make cmake autoconf automake libtool pkg-config \
             binutils gettext kernel-headers m4 glibc-i18n glibc-profile \
-            guile gc patch python3
-             
+            guile gc patch python3 libarchive diffutils libssh2 pcre libxml2"
+          echo y | slackpkg install $BASELINE || true
+          echo y | slackpkg upgrade $BASELINE || true
+          ldconfig
 
       - name: Install slackpkg dependencies
         if: inputs.slackpkg_deps != ''
         run: |
           echo "Installing slackpkg dependencies: ${{ inputs.slackpkg_deps }}"
-          echo y | slackpkg install ${{ inputs.slackpkg_deps }}
+          echo y | slackpkg install ${{ inputs.slackpkg_deps }} || true
+          echo y | slackpkg upgrade ${{ inputs.slackpkg_deps }} || true
+          ldconfig
 
       - name: Install sbopkg dependencies
         if: inputs.sbopkg_deps != ''
@@ -84,7 +88,12 @@ jobs:
           fi
 
           echo "Downloading: $DOWNLOAD_URL"
-          wget -c "$DOWNLOAD_URL"
+          wget -c --content-disposition "$DOWNLOAD_URL"
+
+          # Strip query parameters from downloaded filenames (e.g. SourceForge ?viasf=1)
+          for f in *\?*; do
+            [ -e "$f" ] && mv "$f" "${f%%\?*}" || true
+          done
 
       - name: Run SlackBuild
         run: |
