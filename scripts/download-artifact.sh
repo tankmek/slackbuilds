@@ -9,8 +9,6 @@
 
 set -euo pipefail
 
-WORKFLOW_NAME="SlackBuild Update Pipeline"
-
 usage() {
   echo "Usage: $(basename "$0") <package>"
   echo
@@ -37,19 +35,22 @@ if ! gh auth status &>/dev/null; then
   exit 1
 fi
 
-# Find the latest successful workflow run
-echo "Finding latest successful '${WORKFLOW_NAME}' run for ${PACKAGE}..."
-RUN_ID=$(gh run list \
-  --workflow "${WORKFLOW_NAME}" \
-  --status success \
-  --json databaseId,headBranch \
-  --jq ".[] | select(.headBranch | startswith(\"update/${PACKAGE}-\")) | .databaseId" \
-  | head -n1)
+# Find the latest artifact by name via the GitHub artifacts API
+echo "Finding latest artifact '${ARTIFACT_NAME}'..."
+ARTIFACT_JSON=$(gh api "repos/{owner}/{repo}/actions/artifacts?name=${ARTIFACT_NAME}&per_page=1" \
+  --jq '.artifacts[0] // empty')
 
-if [[ -z "$RUN_ID" ]]; then
-  echo "Error: no successful run found for package '${PACKAGE}'." >&2
+if [[ -z "$ARTIFACT_JSON" ]]; then
+  echo "Error: no artifact found named '${ARTIFACT_NAME}'." >&2
   exit 1
 fi
+
+if [[ "$(echo "$ARTIFACT_JSON" | jq -r '.expired')" == "true" ]]; then
+  echo "Error: artifact '${ARTIFACT_NAME}' has expired. Re-run the workflow to generate a new one." >&2
+  exit 1
+fi
+
+RUN_ID=$(echo "$ARTIFACT_JSON" | jq -r '.workflow_run.id')
 
 echo "Downloading artifact '${ARTIFACT_NAME}' from run ${RUN_ID}..."
 gh run download "$RUN_ID" -n "$ARTIFACT_NAME"
