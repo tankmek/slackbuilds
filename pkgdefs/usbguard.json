@@ -19,7 +19,8 @@
     "pyparsing",
     "python-packaging",
     "python-setuptools",
-    "linuxdoc-tools"
+    "linuxdoc-tools",
+    "libgcrypt"
   ],
   "sbopkg_deps": [
     "abseil-cpp",
