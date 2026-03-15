@@ -43,14 +43,15 @@ jobs:
           echo y | slackpkg install \
             gcc gcc-g++ make cmake autoconf automake libtool pkg-config \
             binutils gettext kernel-headers m4 glibc-i18n glibc-profile \
-            guile gc patch python3
-             
+            guile gc patch python3 libarchive diffutils || true
+          ldconfig
 
       - name: Install slackpkg dependencies
         if: inputs.slackpkg_deps != ''
         run: |
           echo "Installing slackpkg dependencies: ${{ inputs.slackpkg_deps }}"
-          echo y | slackpkg install ${{ inputs.slackpkg_deps }}
+          echo y | slackpkg install ${{ inputs.slackpkg_deps }} || true
+          ldconfig
 
       - name: Install sbopkg dependencies
         if: inputs.sbopkg_deps != ''
@@ -112,7 +113,7 @@ jobs:
           fi
 
           echo "Downloading: $DOWNLOAD_URL"
-          wget -c "$DOWNLOAD_URL"
+          wget -c --content-disposition "$DOWNLOAD_URL"
 
       - name: Run SlackBuild
         run: |
