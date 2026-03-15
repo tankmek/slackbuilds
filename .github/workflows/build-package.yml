@@ -42,7 +42,7 @@ jobs:
         run: |
           BASELINE="gcc gcc-g++ make cmake autoconf automake libtool pkg-config \
             binutils gettext kernel-headers m4 glibc-i18n glibc-profile \
-            guile gc patch python3 libarchive diffutils"
+            guile gc patch python3 libarchive diffutils libssh2 pcre"
           echo y | slackpkg install $BASELINE || true
           echo y | slackpkg upgrade $BASELINE || true
           ldconfig
@@ -63,18 +63,6 @@ jobs:
             echo "Installing sbopkg dependency: $dep"
             sbopkg -B -i "$dep"
           done
-
-      - name: Debug build environment
-        run: |
-          echo "=== Test compile with -lcurl ==="
-          echo 'char curl_easy_init(); int main() { return curl_easy_init(); }' > /tmp/test_curl.c
-          gcc -v /tmp/test_curl.c -lcurl -o /tmp/test_curl 2>&1 || echo "LINK FAILED"
-          echo ""
-          echo "=== curl include headers ==="
-          ls /usr/include/curl/ 2>/dev/null || echo "no curl headers"
-          echo ""
-          echo "=== ldd libcurl.so ==="
-          ldd /usr/lib64/libcurl.so 2>&1 | head -20 || echo "ldd failed"
 
       - name: Copy package to build directory
         run: |
