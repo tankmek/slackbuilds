@@ -61,6 +61,34 @@ jobs:
             sbopkg -B -i "$dep"
           done
 
+      - name: Debug pkg-config paths
+        if: inputs.package == 'usbguard'
+        run: |
+          echo "=== pkg-config built-in search path ==="
+          pkg-config --variable pc_path pkg-config || echo "failed to get pc_path"
+          echo ""
+          echo "=== PKG_CONFIG_PATH env ==="
+          echo "${PKG_CONFIG_PATH:-<unset>}"
+          echo ""
+          echo "=== .pc files in /usr/lib64/pkgconfig (filtered) ==="
+          ls /usr/lib64/pkgconfig/ 2>/dev/null | grep -iE "dbus|gio|glib|gobject|polkit" || echo "none found or dir missing"
+          echo ""
+          echo "=== .pc files in /usr/lib/pkgconfig (filtered) ==="
+          ls /usr/lib/pkgconfig/ 2>/dev/null | grep -iE "dbus|gio|glib|gobject|polkit" || echo "none found or dir missing"
+          echo ""
+          echo "=== .pc files in /usr/share/pkgconfig (filtered) ==="
+          ls /usr/share/pkgconfig/ 2>/dev/null | grep -iE "dbus|gio|glib|gobject|polkit" || echo "none found or dir missing"
+          echo ""
+          echo "=== Testing individual pkg-config modules ==="
+          for mod in dbus-1 gio-2.0 glib-2.0 gobject-2.0 polkit-gobject-1; do
+            if pkg-config --exists "$mod" 2>/dev/null; then
+              echo "$mod: FOUND ($(pkg-config --modversion $mod))"
+            else
+              echo "$mod: NOT FOUND"
+              pkg-config --print-errors "$mod" 2>&1 || true
+            fi
+          done
+
       - name: Copy package to build directory
         run: |
           PKG="${{ inputs.package }}"

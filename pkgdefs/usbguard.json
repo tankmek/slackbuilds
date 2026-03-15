@@ -7,6 +7,7 @@
     "libxml2", 
     "libxslt",
     "dbus",
+    "elogind",
     "polkit",
     "glib2",
     "libcap-ng",
