@@ -12,6 +12,7 @@
     "glib2",
     "pcre",
     "libffi",
+    "zlib",
     "libcap-ng",
     "flex", 
     "expat", 
