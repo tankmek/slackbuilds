@@ -56,6 +56,17 @@ jobs:
           echo y | slackpkg upgrade ${{ inputs.slackpkg_deps }} || true
           ldconfig
 
+      - name: Debug libpcap
+        if: inputs.package == 'arping'
+        run: |
+          echo "=== ls libpcap ==="
+          ls -la /usr/lib64/libpcap* 2>/dev/null || echo "no libpcap in /usr/lib64"
+          echo "=== ldd libpcap ==="
+          ldd /usr/lib64/libpcap.so 2>&1 || echo "ldd failed"
+          echo "=== test link ==="
+          echo 'char pcap_open_live(); int main() { return pcap_open_live(); }' > /tmp/test_pcap.c
+          gcc -v /tmp/test_pcap.c -lpcap -o /tmp/test_pcap 2>&1 || echo "LINK FAILED"
+
       - name: Install sbopkg dependencies
         if: inputs.sbopkg_deps != ''
         run: |
