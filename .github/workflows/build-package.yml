@@ -105,13 +105,6 @@ jobs:
             echo "Building ${PKG} version ${VERSION}"
           fi
 
-          # Debug: check pkg-config state right before build
-          echo "=== Pre-build pkg-config check ==="
-          for mod in dbus-1 gio-2.0 glib-2.0 gobject-2.0 polkit-gobject-1 libpcre libffi; do
-            pkg-config --exists "$mod" 2>/dev/null && echo "$mod: OK" || echo "$mod: MISSING ($(pkg-config --print-errors "$mod" 2>&1))"
-          done
-          echo "=== End debug ==="
-
           chmod +x "${PKG}.SlackBuild"
           "./${PKG}.SlackBuild"
 
