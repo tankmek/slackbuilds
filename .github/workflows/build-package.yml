@@ -84,7 +84,7 @@ jobs:
           fi
 
           echo "Downloading: $DOWNLOAD_URL"
-          wget -c "$DOWNLOAD_URL"
+          wget -c --content-disposition "$DOWNLOAD_URL"
 
       - name: Run SlackBuild
         run: |
