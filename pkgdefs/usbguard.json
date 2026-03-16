@@ -7,14 +7,21 @@
     "libxml2", 
     "libxslt",
     "dbus",
+    "elogind",
     "polkit",
     "glib2",
+    "pcre",
+    "libffi",
+    "zlib",
     "libcap-ng",
     "flex", 
     "expat", 
     "pyparsing",
     "python-packaging",
-    "python-setuptools"
+    "python-setuptools",
+    "linuxdoc-tools",
+    "libgcrypt",
+    "libgpg-error"
   ],
   "sbopkg_deps": [
     "abseil-cpp",
