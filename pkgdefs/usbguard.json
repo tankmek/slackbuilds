@@ -18,7 +18,10 @@
     "expat", 
     "pyparsing",
     "python-packaging",
-    "python-setuptools"
+    "python-setuptools",
+    "linuxdoc-tools",
+    "libgcrypt",
+    "libgpg-error"
   ],
   "sbopkg_deps": [
     "abseil-cpp",
