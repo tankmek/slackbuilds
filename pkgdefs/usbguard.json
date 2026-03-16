@@ -20,7 +20,8 @@
     "python-packaging",
     "python-setuptools",
     "linuxdoc-tools",
-    "libgcrypt"
+    "libgcrypt",
+    "libgpg-error"
   ],
   "sbopkg_deps": [
     "abseil-cpp",
