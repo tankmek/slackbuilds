@@ -9,9 +9,12 @@ on:
         type: choice
         options:
           - arping
+          - coolkey
           - dirb
           - fpc-source
           - lastpass-cli
+          - nbtscan
+          - nwipe
           - tinyproxy
           - usbguard
           - zeek
@@ -299,7 +302,7 @@ jobs:
       - name: Detect changed package
         id: detect
         run: |
-          KNOWN_PACKAGES="arping dirb fpc-source lastpass-cli tinyproxy usbguard zeek"
+          KNOWN_PACKAGES="arping coolkey dirb fpc-source lastpass-cli nbtscan nwipe tinyproxy usbguard zeek"
 
           CHANGED_FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD)
           echo "Changed files:"
