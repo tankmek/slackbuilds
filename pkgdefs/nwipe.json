@@ -1,5 +1,5 @@
 {
   "download_fmt": "https://github.com/martijnvanbrummelen/nwipe/archive/v%v/nwipe-%v.tar.gz",
-  "slackpkg_deps": ["texinfo"],
+  "slackpkg_deps": ["texinfo", "parted"],
   "sbopkg_deps": ["libconfig"]
 }
